@@ -1,0 +1,1585 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>雅思538 智能斩词 (百词斩模式版)</title>
+    <meta name="description" content="基于记忆曲线的雅思核心538词汇记忆工具，支持百词斩模式、Class 1-3词库切换及语音朗读，助你高效备考雅思。">
+    <meta name="keywords" content="雅思538, 雅思背单词, 智能斩词, 雅思核心词汇, IELTS词汇">
+    <meta name="author" content="你的名字或昵称">
+
+    
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .perspective-1000 { perspective: 1000px; }
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* 荧光条动画 */
+        .error-bar { transition: width 0.5s ease-out; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-900 font-sans min-h-screen flex flex-col">
+
+    <!-- 头部 -->
+    <header class="bg-white shadow-sm px-4 py-3 sticky top-0 z-30">
+        <div class="max-w-md mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                <h1 class="text-lg font-bold text-slate-800">雅思538 智能斩词</h1>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="toggleStats(true)" class="p-2 text-slate-400 hover:text-indigo-600" title="统计详情">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
+                </button>
+                <button onclick="toggleSettings(true)" class="p-2 text-slate-400 hover:text-slate-600" title="设置">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.47a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.35a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 分类栏 -->
+    <div class="bg-white border-t border-slate-100 px-4 py-3 sticky top-14 z-20 shadow-sm">
+        <div id="category-container" class="max-w-md mx-auto flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+            <!-- JS 注入按钮 -->
+        </div>
+    </div>
+
+    <!-- 主内容 -->
+    <main class="flex-1 flex flex-col items-center justify-center p-4 w-full max-w-md mx-auto">
+        
+        <!-- 进度条 -->
+        <div class="w-full mb-6">
+            <div class="flex justify-between text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wide">
+                <span id="current-category-label">全部乱序</span>
+                <span id="progress-text">进度 0% (0/0)</span>
+            </div>
+            <div class="h-2 bg-slate-200 rounded-full overflow-hidden">
+                <div id="progress-bar" class="h-full bg-indigo-500 transition-all duration-500 ease-out" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <!-- 卡片区域 -->
+        <div class="w-full relative min-h-[480px] perspective-1000">
+            
+            <div id="card-view" class="w-full bg-white rounded-3xl shadow-xl overflow-hidden min-h-[480px] flex flex-col border border-slate-100 relative fade-in" style="display: flex;">
+                
+                <div id="word-badge" class="absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-bold border">
+                    Class 1
+                </div>
+
+                <!-- 单词显示区 -->
+                <div class="flex-1 flex flex-col items-center justify-center p-6 text-center cursor-pointer select-none" onclick="toggleMeaning()">
+                    <div class="mb-6 w-full relative">
+                        <h2 id="word-text" class="text-4xl font-black text-slate-800 tracking-tight mb-2 break-words z-10 relative">
+                            Loading...
+                        </h2>
+                        <!-- 错误次数提示 -->
+                        <div id="error-badge" class="hidden inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 mb-2">
+                            错误: <span id="error-count-display" class="ml-1">0</span>
+                        </div>
+                        <p class="text-slate-400 text-sm font-semibold tracking-widest uppercase mt-1">IELTS Reading</p>
+                    </div>
+
+                    <!-- 释义区 -->
+                    <div id="meaning-container" class="w-full transition-all duration-300 opacity-0 translate-y-8 px-2" style="pointer-events: none;">
+                        <div class="bg-indigo-50 px-5 py-4 rounded-xl mb-3 border border-indigo-100 shadow-sm">
+                            <p id="meaning-text" class="text-lg text-slate-800 font-bold leading-relaxed">
+                                ...
+                            </p>
+                        </div>
+                        <div id="synonym-box" class="bg-orange-50 px-5 py-3 rounded-xl border border-orange-100 hidden shadow-sm text-left">
+                            <p class="text-xs text-orange-500 font-bold uppercase mb-1 flex items-center gap-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                                考点替换 / 关联词
+                            </p>
+                            <p id="synonym-text" class="text-base text-slate-700 font-medium italic">
+                                ...
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div id="hint-text" class="absolute bottom-32 text-slate-300 text-sm flex items-center gap-2 animate-bounce">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                        点击显示释义 <span id="hint-key" class="hidden md:inline bg-slate-200 px-1 rounded text-xs ml-1">Space</span>
+                    </div>
+                </div>
+
+                <!-- 底部按钮区 (标准模式: 3个按钮) -->
+                <div id="controls-standard" class="bg-slate-50 p-4 border-t border-slate-100 grid grid-cols-3 gap-3">
+                    <!-- 不记得 -->
+                    <button onclick="handleForgot()" class="bg-white border border-slate-200 hover:bg-red-50 hover:border-red-200 hover:text-red-600 text-slate-700 py-3 rounded-xl font-bold text-sm md:text-base shadow-sm active:scale-95 transition-all flex flex-col items-center justify-center gap-1 group">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 opacity-60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 18h1.4c1.3 0 2.5-.6 3.3-1.7l14.2-17"/><path d="M2 5h1.4c1.3 0 2.5.6 3.3 1.7l14.2 17"/><path d="M15 5h6v6"/><path d="M15 19h6v-6"/></svg>
+                        <span>不记得 <span id="key-forgot" class="hidden md:inline font-normal text-xs opacity-50 bg-slate-100 px-1 rounded ml-1">Q</span></span>
+                    </button>
+                    
+                    <!-- 模糊 -->
+                    <button onclick="handleFuzzy()" class="bg-amber-100 border border-amber-200 hover:bg-amber-200 text-amber-800 py-3 rounded-xl font-bold text-sm md:text-base shadow-sm active:scale-95 transition-all flex flex-col items-center justify-center gap-1 group">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                        <span>模糊 <span id="key-fuzzy" class="hidden md:inline font-normal text-xs opacity-50 bg-amber-50 px-1 rounded ml-1">W</span></span>
+                        <span class="text-[10px] opacity-75 font-normal">15词后重现</span>
+                    </button>
+
+                    <!-- 斩 -->
+                    <button onclick="handleMaster()" class="bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-bold text-sm md:text-base shadow-lg shadow-indigo-200 active:scale-95 transition-all flex flex-col items-center justify-center gap-1 group">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        <span>斩 <span id="key-master" class="hidden md:inline font-normal text-xs opacity-50 bg-indigo-500 px-1 rounded ml-1">E</span></span>
+                    </button>
+                </div>
+
+                <!-- 底部按钮区 (复习模式: 下一个) -->
+                <div id="controls-review" class="bg-slate-50 p-4 border-t border-slate-100 hidden">
+                    <button onclick="handleNext()" class="w-full bg-slate-800 hover:bg-slate-900 text-white py-4 rounded-xl font-bold text-lg shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 group">
+                        下一个
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 group-hover:translate-x-1 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                        <span class="hidden md:inline bg-slate-700 px-1.5 py-0.5 rounded text-xs font-normal ml-2">Space</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 完成界面 -->
+            <div id="done-view" class="w-full bg-white rounded-3xl shadow-xl p-12 text-center flex flex-col items-center min-h-[480px] justify-center hidden">
+                <div class="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mb-6">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 text-green-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+                <h2 class="text-2xl font-bold text-slate-800 mb-2">太棒了！</h2>
+                <p class="text-slate-600 mb-8">
+                    你已经斩完了 <span id="done-category-name" class="text-indigo-600 font-bold">...</span> 的所有单词。
+                </p>
+                <div class="flex gap-4">
+                    <button onclick="resetProgress()" class="px-6 py-3 rounded-full border border-slate-200 text-slate-600 font-bold hover:bg-slate-50">
+                        重置当前进度
+                    </button>
+                    <button onclick="switchCategory('all')" class="px-6 py-3 rounded-full bg-indigo-600 text-white font-bold shadow-lg hover:bg-indigo-700">
+                        挑战其他分类
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- 设置弹窗 -->
+    <div id="settings-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-6 backdrop-blur-sm">
+        <div class="w-full max-w-lg bg-white rounded-2xl shadow-xl p-6 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">设置</h2>
+                <button onclick="toggleSettings(false)" class="p-2 hover:bg-slate-100 rounded-full">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            
+            <div class="space-y-6">
+                <!-- 快捷键设置 -->
+                <div>
+                    <h3 class="font-semibold mb-3 text-slate-800 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"/><line x1="6" y1="8" x2="6" y2="8"/><line x1="10" y1="8" x2="10" y2="8"/><line x1="14" y1="8" x2="14" y2="8"/><line x1="18" y1="8" x2="18" y2="8"/><line x1="6" y1="12" x2="6" y2="12"/><line x1="10" y1="12" x2="10" y2="12"/><line x1="14" y1="12" x2="14" y2="12"/><line x1="18" y1="12" x2="18" y2="12"/><line x1="6" y1="16" x2="18" y2="16"/></svg>
+                        快捷键 (点击输入框按键修改)
+                    </h3>
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <label class="block text-slate-500 mb-1">显示释义 / 下一个</label>
+                            <input type="text" readonly id="input-key-show" class="w-full p-2 border rounded bg-slate-50 text-center font-mono cursor-pointer hover:bg-white focus:ring-2 focus:ring-indigo-500 outline-none" value="Space" onclick="startListeningKey(this, 'show')">
+                        </div>
+                        <div>
+                            <label class="block text-slate-500 mb-1">不记得</label>
+                            <input type="text" readonly id="input-key-forgot" class="w-full p-2 border rounded bg-slate-50 text-center font-mono cursor-pointer hover:bg-white focus:ring-2 focus:ring-indigo-500 outline-none" value="q" onclick="startListeningKey(this, 'forgot')">
+                        </div>
+                        <div>
+                            <label class="block text-slate-500 mb-1">模糊</label>
+                            <input type="text" readonly id="input-key-fuzzy" class="w-full p-2 border rounded bg-slate-50 text-center font-mono cursor-pointer hover:bg-white focus:ring-2 focus:ring-indigo-500 outline-none" value="w" onclick="startListeningKey(this, 'fuzzy')">
+                        </div>
+                        <div>
+                            <label class="block text-slate-500 mb-1">斩 (已会)</label>
+                            <input type="text" readonly id="input-key-master" class="w-full p-2 border rounded bg-slate-50 text-center font-mono cursor-pointer hover:bg-white focus:ring-2 focus:ring-indigo-500 outline-none" value="e" onclick="startListeningKey(this, 'master')">
+                        </div>
+                    </div>
+                    <button onclick="resetShortcuts()" class="text-xs text-indigo-600 hover:underline mt-2">恢复默认快捷键</button>
+                </div>
+
+                <hr class="border-slate-100">
+
+                <!-- 词库管理 -->
+                <div class="space-y-4">
+                    <button onclick="resetToDefault()" class="w-full border border-slate-300 hover:bg-slate-50 text-slate-700 py-3 rounded-lg font-medium flex items-center justify-center gap-2">
+                        恢复默认538词库 (含全量反向考察)
+                    </button>
+                    <div class="border-t border-slate-100 pt-4">
+                        <h3 class="font-semibold mb-2 text-sm">手动导入补充词汇</h3>
+                        <textarea id="import-area" class="w-full h-32 p-3 border border-slate-300 rounded-lg text-sm mb-2" placeholder="单词 释义 (每行一个)"></textarea>
+                        <button onclick="importWords()" class="w-full bg-indigo-600 text-white py-2 rounded-lg font-medium">导入</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 统计详情弹窗 -->
+    <div id="stats-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-end md:items-center justify-center md:p-6 backdrop-blur-sm">
+        <div class="w-full max-w-2xl bg-white rounded-t-2xl md:rounded-2xl shadow-2xl h-[90vh] md:h-[80vh] flex flex-col">
+            <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-white rounded-t-2xl">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-800">学习统计</h2>
+                    <p class="text-xs text-slate-500 mt-1">荧光条长度代表错误/模糊次数</p>
+                </div>
+                <button onclick="toggleStats(false)" class="p-2 hover:bg-slate-100 rounded-full">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="px-5 py-3 bg-slate-50 border-b border-slate-100 flex gap-2 overflow-x-auto no-scrollbar">
+                <button onclick="renderStatsList('all')" class="stats-filter-btn px-3 py-1.5 rounded-full text-xs font-bold bg-indigo-600 text-white" data-filter="all">全部</button>
+                <button onclick="renderStatsList('mastered')" class="stats-filter-btn px-3 py-1.5 rounded-full text-xs font-bold bg-slate-200 text-slate-600" data-filter="mastered">已斩</button>
+                <button onclick="renderStatsList('learning')" class="stats-filter-btn px-3 py-1.5 rounded-full text-xs font-bold bg-slate-200 text-slate-600" data-filter="learning">错题本</button>
+                <button onclick="renderStatsList('unseen')" class="stats-filter-btn px-3 py-1.5 rounded-full text-xs font-bold bg-slate-200 text-slate-600" data-filter="unseen">未见</button>
+            </div>
+            <div class="grid grid-cols-3 gap-2 px-5 py-3 text-center border-b border-slate-100 text-xs">
+                <div class="bg-blue-50 p-2 rounded-lg">
+                    <div class="text-blue-500 font-bold mb-0.5">总词数</div>
+                    <div id="stat-total" class="text-lg font-black text-slate-700">0</div>
+                </div>
+                <div class="bg-green-50 p-2 rounded-lg">
+                    <div class="text-green-600 font-bold mb-0.5">已斩</div>
+                    <div id="stat-mastered" class="text-lg font-black text-slate-700">0</div>
+                </div>
+                <div class="bg-red-50 p-2 rounded-lg">
+                    <div class="text-red-500 font-bold mb-0.5">累计错误</div>
+                    <div id="stat-errors" class="text-lg font-black text-slate-700">0</div>
+                </div>
+            </div>
+            <div id="stats-list" class="flex-1 overflow-y-auto p-0 md:p-2 bg-slate-50 space-y-[1px]"></div>
+        </div>
+    </div>
+
+    <!-- JavaScript 逻辑 -->
+    <script>
+        // --- 核心词库 (保留你的原始结构) ---
+        const DEFAULT_DATA = [
+            // 第一类
+            { c: 'class1', w: 'resemble', m: 'v. 像，与...相似', s: 'like, look like, be similar to' },
+            { c: 'class1', w: 'recognize', m: 'v. 认出，识别；承认', s: 'perceive, acknowledge, realize, admit, identify' },
+            { c: 'class1', w: 'adjust', m: 'v. 调整，使适合', s: 'change, modify, shift, alter' },
+            { c: 'class1', w: 'approach', m: 'n. 方法', s: 'method, way' },
+            { c: 'class1', w: 'fundamental', m: 'adj. 基本的，基础的', s: 'rudimentary, preliminary, basic' },
+            { c: 'class1', w: 'rely on', m: 'v. 依靠，依赖', s: 'depend on' },
+            { c: 'class1', w: 'domestic', m: 'adj. 家庭的；国内的', s: 'home, local, national' },
+            { c: 'class1', w: 'measure', m: 'v. 测量', s: 'calculate, assess, evaluate' },
+            { c: 'class1', w: 'trait', m: 'n. 特性，特征', s: 'characteristic, feature, property' },
+            { c: 'class1', w: 'coin', m: 'v. 创造', s: 'first used, invent' },
+            { c: 'class1', w: 'artificial', m: 'adj. 人造的，仿造的', s: 'synthetic, man-made' },
+            { c: 'class1', w: 'prompt', m: 'v. 促进，激起', s: 'initiate, immediately' },
+            { c: 'class1', w: 'exchange', m: 'v. 交换', s: 'share, apply A to B' },
+            { c: 'class1', w: 'underlie', m: 'v. 成为...基础', s: 'based on, ground, root' },
+            { c: 'class1', w: 'ignore', m: 'v. 忽视，不顾', s: 'neglect, overlook, underestimate' },
+            { c: 'class1', w: 'fertiliser', m: 'n. 化肥，肥料', s: 'chemical, toxic, unnatural' },
+            { c: 'class1', w: 'that', m: 'pron. 那；那个 (指代考点)', s: 'this, it, they, those, these, such' },
+            { c: 'class1', w: 'and', m: 'conj. 和，而且 (并列考点)', s: 'or, as well as, not only...but also, besides' },
+            { c: 'class1', w: 'rather than', m: 'conj. 而非，不是 (转折考点)', s: 'but, yet, however, whereas, instead' },
+            { c: 'class1', w: 'thanks to', m: 'conj. 由于，幸亏 (因果考点)', s: 'stem from, owing to, due to, because of' },
+            // 第二类
+            { c: 'class2', w: 'diversity', m: 'n. 多样性，差异', s: 'variety, difference' },
+            { c: 'class2', w: 'detect', m: 'v. 查明，发现', s: 'find, look for, seek, search' },
+            { c: 'class2', w: 'isolate', m: 'v. 使隔离，使孤立', s: 'inaccessible' },
+            { c: 'class2', w: 'avoid', m: 'v. 避免', s: 'escape, evitable' },
+            { c: 'class2', w: 'budget', m: 'n. 预算', s: 'fund, financial' },
+            { c: 'class2', w: 'adapt to', m: 'v. 使适应', s: 'fit, suit' },
+            { c: 'class2', w: 'alternative', m: 'adj. 供替代的', s: 'substitute' },
+            { c: 'class2', w: 'compensate', m: 'n. 补偿，赔偿', s: 'make up, offset' },
+            { c: 'class2', w: 'component', m: 'n. 成分，要素', s: 'proportion' },
+            { c: 'class2', w: 'military', m: 'adj. 军事的', s: 'weapon, army' },
+            { c: 'class2', w: 'criteria', m: 'n. 标准', s: 'standard' },
+            { c: 'class2', w: 'curriculum', m: 'n. 课程', s: 'syllabus, course of study' },
+            { c: 'class2', w: 'feasible', m: 'adj. 可行的', s: 'realistic, viable' },
+            { c: 'class2', w: 'constrain', m: 'v. 束缚，限制', s: 'stop, control' },
+            { c: 'class2', w: 'deficiency', m: 'n. 缺陷，缺点', s: 'shortage, defect, weakness' },
+            { c: 'class2', w: 'supplement', m: 'v. 补充', s: 'provision' },
+            { c: 'class2', w: 'distinguish', m: 'v. 区别，辨别', s: 'separate, differentiate' },
+            { c: 'class2', w: 'analyze', m: 'v. 分析，解释', s: 'examine, diagnose' },
+            { c: 'class2', w: 'emphasize', m: 'v. 强调，着重', s: 'focus on, stress' },
+            { c: 'class2', w: 'enormous', m: 'adj. 庞大的', s: 'massive, large' },
+            { c: 'class2', w: 'imitate', m: 'v. 模仿', s: 'mimic, copy' },
+            { c: 'class2', w: 'impair', m: 'v. 削弱，减少', s: 'damage, diminish, decrease' },
+            { c: 'class2', w: 'hinder', m: 'v. 阻碍', s: 'impede, prevent, deter' },
+            { c: 'class2', w: 'legitimate', m: 'adj. 合法的', s: 'legal' },
+            { c: 'class2', w: 'limitation', m: 'n. 限制', s: 'restriction' },
+            { c: 'class2', w: 'convention', m: 'n. 手法；习俗', s: 'method; tradition' },
+            { c: 'class2', w: 'demanding', m: 'adj. 苛求的', s: 'troublesome' },
+            { c: 'class2', w: 'determine', m: 'v. 决定', s: 'decide' },
+            { c: 'class2', w: 'accelerate', m: 'v. 加速，促进', s: 'speed up' },
+            { c: 'class2', w: 'ancient', m: 'adj. 古代的', s: 'aged, old' },
+            { c: 'class2', w: 'beneficial', m: 'adj. 有益的', s: 'helpful, advantageous' },
+            { c: 'class2', w: 'chronic', m: 'adj. 慢性的', s: 'lasting' },
+            { c: 'class2', w: 'conscious', m: 'adj. 有意识的', s: 'aware, knowing' },
+            { c: 'class2', w: 'minimize', m: 'v. 最小化', s: 'reduce, lessen' },
+            { c: 'class2', w: 'immunity', m: 'n. 免疫力', s: 'resistance' },
+            { c: 'class2', w: 'imperative', m: 'adj. 必要的，紧急的', s: 'compelling, necessary' },
+            { c: 'class2', w: 'secrete', m: 'v. 分泌', s: 'discharge, exude' },
+            { c: 'class2', w: 'exaggerate', m: 'v. 夸大', s: 'overstate' },
+            { c: 'class2', w: 'transmit', m: 'v. 传达，传输', s: 'pass, send, transfer' },
+            { c: 'class2', w: 'extinct', m: 'v. 灭绝', s: 'die out, lost' },
+            { c: 'class2', w: 'exclusive', m: 'adj. 独有的；排外的；专一的', s: 'only' },
+            { c: 'class2', w: 'guarantee', m: 'v. 保证', s: 'assure' },
+            { c: 'class2', w: 'inherit', m: 'v. 继承', s: 'receive' },
+            { c: 'class2', w: 'witness', m: 'n. 见证；目击者', s: 'view, see' },
+            { c: 'class2', w: 'magnetic', m: 'adj. 有磁性的', s: 'attractive' },
+            { c: 'class2', w: 'loss', m: 'n. 减少；损失', s: 'waste, gone' },
+            { c: 'class2', w: 'option', m: 'n. 选择', s: 'choice' },
+            { c: 'class2', w: 'prefer to', m: 'v. 更喜欢', s: 'rather' },
+            { c: 'class2', w: 'priority', m: 'n. 优先权', s: 'preference' },
+            { c: 'class2', w: 'primary', m: 'adj. 主要的', s: 'principal, main' },
+            { c: 'class2', w: 'principle', m: 'n. 原理', s: 'rule' },
+            { c: 'class2', w: 'potential', m: 'adj. 潜在的 n. 潜能', s: 'possibility' },
+            { c: 'class2', w: 'quantity', m: 'n. 数量', s: 'number' },
+            { c: 'class2', w: 'settle', m: 'v. 解决；定居', s: 'fix, figure out' },
+            { c: 'class2', w: 'sophisticate', m: 'v. 使复杂', s: 'complicate' },
+            { c: 'class2', w: 'specific', m: 'adj. 明确的；特殊的', s: 'detailed, particular' },
+            { c: 'class2', w: 'survive', m: 'v. 存活', s: 'remain' },
+            { c: 'class2', w: 'swift', m: 'adj. 迅速的', s: 'quick, rapid' },
+            { c: 'class2', w: 'unexpectedly', m: 'adv. 出乎意料的', s: 'surprising' },
+            { c: 'class2', w: 'surrounding', m: 'n. 环境', s: 'setting, environment' },
+            { c: 'class2', w: 'attempt', m: 'v. 尝试', s: 'try, test' },
+            { c: 'class2', w: 'expertise', m: 'n. 专门技术', s: 'knowledge, skill' },
+            { c: 'class2', w: 'faculty', m: 'n. 能力；教员', s: 'ability' },
+            { c: 'class2', w: 'donate', m: 'v. 捐赠', s: 'contribute' },
+            { c: 'class2', w: 'dynamics', m: 'n. 动力学', s: 'energy, force' },
+            { c: 'class2', w: 'incentive', m: 'n. 刺激；动机', s: 'motive, stimulus' },
+            { c: 'class2', w: 'mortality', m: 'n. 死亡率', s: 'death' },
+            { c: 'class2', w: 'peripheral', m: 'adj. 外围的，次要的', s: 'unimportant, minor' },
+            { c: 'class2', w: 'vicinity', m: 'n. 附近', s: 'neighbourhood, nearby' },
+            { c: 'class2', w: 'threaten', m: 'v. 威胁', s: 'endanger, jeopardize' },
+            { c: 'class2', w: 'practice', m: 'n. 实行；练习', s: 'method, exercise' },
+            { c: 'class2', w: 'bacteria', m: 'n. 细菌', s: 'virus, germ, microbe' },
+            { c: 'class2', w: 'be subject to', m: 'v. 受...支配', s: 'face' },
+            { c: 'class2', w: 'be liable to', m: 'v. 易于...', s: 'potential' },
+            { c: 'class2', w: 'innate', m: 'adj. 天生的', s: 'built-in, inborn' },
+            { c: 'class2', w: 'pattern', m: 'n. 模式', s: 'formation' },
+            { c: 'class2', w: 'therapy', m: 'n. 治疗', s: 'treatment' },
+            { c: 'class2', w: 'original', m: 'adj. 原始的', s: 'initial, first' },
+            { c: 'class2', w: 'confidential', m: 'adj. 机密的', s: 'undisclosed, secret' },
+            { c: 'class2', w: 'cognitive', m: 'adj. 认知的', s: 'mental' },
+            { c: 'class2', w: 'comply with', m: 'v. 照做，遵守', s: 'obey' },
+            { c: 'class2', w: 'consult', m: 'v. 咨询', s: 'ask for advice' },
+            { c: 'class2', w: 'superior', m: 'adj. 上级的；优秀的', s: 'higher, upper' },
+            { c: 'class2', w: 'co-operation', m: 'n. 合作', s: 'support, work together' },
+            { c: 'class2', w: 'co-ordinate', m: 'v. 协调', s: 'organize, harmonize' },
+            { c: 'class2', w: 'differ', m: 'v. 不同', s: 'vary' },
+            { c: 'class2', w: 'cue', m: 'n. 线索', s: 'hint, clue' },
+            { c: 'class2', w: 'signal', m: 'n. 信号', s: 'symbol, mark, sign' },
+            { c: 'class2', w: 'abandon', m: 'v. 放弃', s: 'quit, give up' },
+            { c: 'class2', w: 'halt', m: 'n. 停止', s: 'stop, quit' },
+            { c: 'class2', w: 'fragile', m: 'adj. 脆弱的', s: 'vulnerable' },
+            { c: 'class2', w: 'retain', m: 'v. 保持，记住', s: 'maintain' },
+            { c: 'class2', w: 'vanish', m: 'v. 消失', s: 'disappear' },
+            { c: 'class2', w: 'delivery', m: 'n. 递送', s: 'send' },
+            { c: 'class2', w: 'erode', m: 'v. 侵蚀', s: 'rust, damage' },
+            { c: 'class2', w: 'induce', m: 'v. 引起', s: 'cause, lead to' },
+            { c: 'class2', w: 'stable', m: 'adj. 稳定的', s: 'constant' },
+            { c: 'class2', w: 'integrate', m: 'v. 整合', s: 'combine, whole' },
+            { c: 'class2', w: 'equal', m: 'adj. 平等的', s: 'fair, even' },
+            { c: 'class2', w: 'grant', m: 'v. 拨款；授予', s: 'offer' },
+            // 第三类
+            { c: 'class3', w: 'accumulate', m: 'v. 积累', s: 'gather' },
+            { c: 'class3', w: 'addictive', m: 'adj. 上瘾的', s: 'habit' },
+            { c: 'class3', w: 'adversity', m: 'n. 逆境', s: 'trouble' },
+            { c: 'class3', w: 'aggression', m: 'n. 侵犯', s: 'attack' },
+            { c: 'class3', w: 'agreeable', m: 'adj. 令人愉快的', s: 'pleasant' },
+            { c: 'class3', w: 'aid', m: 'n. 援助', s: 'help' },
+            { c: 'class3', w: 'allergic', m: 'adj. 过敏的', s: 'irritate' },
+            { c: 'class3', w: 'altitude', m: 'n. 海拔', s: 'height' },
+            { c: 'class3', w: 'application', m: 'n. 应用', s: 'utilization' },
+            { c: 'class3', w: 'approve', m: 'v. 批准', s: 'agree' },
+            { c: 'class3', w: 'array', m: 'n. 排列，大批', s: 'order' },
+            { c: 'class3', w: 'assign', m: 'v. 分配', s: 'allocate' },
+            { c: 'class3', w: 'association', m: 'n. 协会；联系', s: 'union' },
+            { c: 'class3', w: 'attitude', m: 'n. 态度', s: 'opinion' },
+            { c: 'class3', w: 'authority', m: 'n. 权威', s: 'government' },
+            { c: 'class3', w: 'be consistent with', m: 'v. 与...一致', s: 'compatible' },
+            { c: 'class3', w: 'bear', m: 'v. 承担；忍受', s: 'tolerate' },
+            { c: 'class3', w: 'blight', m: 'v. 损害；枯萎', s: 'destroy' },
+            { c: 'class3', w: 'boundary', m: 'n. 边界', s: 'barrier' },
+            { c: 'class3', w: 'bungle', m: 'v. 搞砸，拙劣地工作', s: 'mishandle' },
+            { c: 'class3', w: 'burden', m: 'n. 负担', s: 'load' },
+            { c: 'class3', w: 'calamity', m: 'n. 灾难', s: 'disaster' },
+            { c: 'class3', w: 'capacity', m: 'n. 容量', s: 'volume' },
+            { c: 'class3', w: 'catastrophic', m: 'adj. 灾难的', s: 'disastrous' },
+            { c: 'class3', w: 'cater', m: 'v. 迎合', s: 'serve' },
+            { c: 'class3', w: 'certify', m: 'v. 证明', s: 'verify' },
+            { c: 'class3', w: 'civic', m: 'adj. 市民的', s: 'municipal' },
+            { c: 'class3', w: 'comment', m: 'n. 评论', s: 'remark' },
+            { c: 'class3', w: 'commitment', m: 'n. 承诺', s: 'engagement' },
+            { c: 'class3', w: 'communal', m: 'adj. 公共的', s: 'public' },
+            { c: 'class3', w: 'commute', m: 'v. 通勤', s: 'travel' },
+            { c: 'class3', w: 'compare', m: 'v. 比较', s: 'contrast' },
+            { c: 'class3', w: 'conceal', m: 'v. 隐藏', s: 'hide' },
+            { c: 'class3', w: 'concentrate', m: 'v. 集中', s: 'focus' },
+            { c: 'class3', w: 'concur', m: 'v. 同意', s: 'agree' },
+            { c: 'class3', w: 'confer', m: 'v. 授予', s: 'grant' },
+            { c: 'class3', w: 'conflict', m: 'n. 冲突', s: 'unharmonious' },
+            { c: 'class3', w: 'confuse', m: 'v. 使混乱', s: 'puzzle' },
+            { c: 'class3', w: 'conservative', m: 'adj. 保守的', s: 'traditional' },
+            { c: 'class3', w: 'considerable', m: 'adj. 相当大的', s: 'significant' },
+            { c: 'class3', w: 'contingent', m: 'adj. 因情况而异的', s: 'uncertain' },
+            { c: 'class3', w: 'controversial', m: 'adj. 有争议的', s: 'disputable' },
+            { c: 'class3', w: 'correlation', m: 'n. 相关', s: 'link' },
+            { c: 'class3', w: 'courtship', m: 'n. 求爱', s: 'mate' },
+            { c: 'class3', w: 'crash', m: 'n. 碰撞', s: 'collapse' },
+            { c: 'class3', w: 'credibility', m: 'n. 可信性', s: 'reliance' },
+            { c: 'class3', w: 'criminal', m: 'n. 罪犯', s: 'conviction' },
+            { c: 'class3', w: 'crisis', m: 'n. 危机', s: 'risk' },
+            { c: 'class3', w: 'criticism', m: 'n. 评论', s: 'condemn' },
+            { c: 'class3', w: 'curb', m: 'v. 限制', s: 'restrict' },
+            { c: 'class3', w: 'damp', m: 'adj. 潮湿的', s: 'wet' },
+            { c: 'class3', w: 'dazzle', m: 'v. 使目眩', s: 'flash' },
+            { c: 'class3', w: 'deadline', m: 'n. 最后期限', s: 'limit' },
+            { c: 'class3', w: 'delay', m: 'n. 延期', s: 'postpone' },
+            { c: 'class3', w: 'democratic', m: 'adj. 民主的', s: 'republic' },
+            { c: 'class3', w: 'demographic', m: 'adj. 人口统计学的，人口学', s: 'population statistic' },
+            { c: 'class3', w: 'dental', m: 'adj. 牙科的', s: 'teeth' },
+            { c: 'class3', w: 'depression', m: 'n. 抑郁', s: 'frustration' },
+            { c: 'class3', w: 'designate', m: 'v. 指定', s: 'appoint' },
+            { c: 'class3', w: 'detain', m: 'v. 留住', s: 'hold' },
+            { c: 'class3', w: 'devastate', m: 'v. 毁灭', s: 'wreck' },
+            { c: 'class3', w: 'disclose', m: 'v. 公开', s: 'expose' },
+            { c: 'class3', w: 'disparate', m: 'adj. 不同的', s: 'different' },
+            { c: 'class3', w: 'display', m: 'n. 显示', s: 'show' },
+            { c: 'class3', w: 'disrupt', m: 'v. 破坏', s: 'destroy' },
+            { c: 'class3', w: 'distract', m: 'v. 分心', s: 'divert' },
+            { c: 'class3', w: 'distribute', m: 'v. 分配', s: 'spread' },
+            { c: 'class3', w: 'documentation', m: 'n. 文件', s: 'record' },
+            { c: 'class3', w: 'domain', m: 'n. 领域', s: 'field' },
+            { c: 'class3', w: 'dominant', m: 'adj. 占优势的', s: 'overbearing' },
+            { c: 'class3', w: 'dramatic', m: 'adj. 戏剧化的', s: 'striking' },
+            { c: 'class3', w: 'drought', m: 'n. 干旱', s: 'dry' },
+            { c: 'class3', w: 'durable', m: 'adj. 持久的', s: 'lasting' },
+            { c: 'class3', w: 'eco-friendly', m: 'adj. 环保的', s: 'environmentally-friendly' },
+            { c: 'class3', w: 'elaborate', m: 'v. 详细阐述', s: 'illustrate' },
+            { c: 'class3', w: 'elderly', m: 'adj. 高龄的', s: 'aged' },
+            { c: 'class3', w: 'eliminate', m: 'v. 消除', s: 'dispose' },
+            { c: 'class3', w: 'elusive', m: 'adj. 难懂的', s: 'hard' },
+            { c: 'class3', w: 'encyclopaedia', m: 'n. 百科全书', s: 'entire range of knowledge' },
+            { c: 'class3', w: 'entrepreneur', m: 'n. 企业家', s: 'boss' },
+            { c: 'class3', w: 'equator', m: 'n. 赤道', s: 'geography' },
+            { c: 'class3', w: 'erratically', m: 'adv. 不规律地', s: 'unpredictably' },
+            { c: 'class3', w: 'established', m: 'adj. 已建立的', s: 'built' },
+            { c: 'class3', w: 'estate', m: 'n. 房地产', s: 'property' },
+            { c: 'class3', w: 'ethical', m: 'adj. 道德的', s: 'moral' },
+            { c: 'class3', w: 'eventually', m: 'adv. 最后', s: 'finally' },
+            { c: 'class3', w: 'evidence', m: 'n. 证据', s: 'proof' },
+            { c: 'class3', w: 'evolve', m: 'v. 进化', s: 'develop' },
+            { c: 'class3', w: 'exhausted', m: 'adj. 耗尽的', s: 'fatigue' },
+            { c: 'class3', w: 'experiment', m: 'n. 实验', s: 'test' },
+            { c: 'class3', w: 'exceptional', m: 'adj. 异常的', s: 'extreme' },
+            { c: 'class3', w: 'explicit', m: 'adj. 明确的', s: 'clear' },
+            { c: 'class3', w: 'exploit', m: 'v. 开发', s: 'use' },
+            { c: 'class3', w: 'extend', m: 'v. 延伸', s: 'expand' },
+            { c: 'class3', w: 'extract', m: 'v. 提取', s: 'quotation' },
+            { c: 'class3', w: 'famine', m: 'n. 饥荒', s: 'hunger' },
+            { c: 'class3', w: 'finite', m: 'adj. 有限的', s: 'limited' },
+            { c: 'class3', w: 'fitness', m: 'n. 健康', s: 'health' },
+            { c: 'class3', w: 'foe', m: 'n. 敌人', s: 'enemy' },
+            { c: 'class3', w: 'format', m: 'n. 格式', s: 'structure' },
+            { c: 'class3', w: 'fragment', m: 'n. 碎片', s: 'piece' },
+            { c: 'class3', w: 'freeze', m: 'v. 冰冻', s: 'chill' },
+            { c: 'class3', w: 'fulfill', m: 'v. 满足', s: 'execute' },
+            { c: 'class3', w: 'gene', m: 'n. 基因', s: 'factor' },
+            { c: 'class3', w: 'gifted', m: 'adj. 有天赋的', s: 'talented' },
+            { c: 'class3', w: 'graphic', m: 'adj. 图解的', s: 'picture' },
+            { c: 'class3', w: 'habitat', m: 'n. 栖息地', s: 'residence' },
+            { c: 'class3', w: 'harbor', m: 'v. 怀有', s: 'hold' },
+            { c: 'class3', w: 'hardship', m: 'n. 困苦', s: 'difficult' },
+            { c: 'class3', w: 'harsh', m: 'adj. 严酷的', s: 'rough' },
+            { c: 'class3', w: 'hypothesis', m: 'n. 假设', s: 'assumption' },
+            { c: 'class3', w: 'impact', m: 'n. 影响', s: 'influence' },
+            { c: 'class3', w: 'impressive', m: 'adj. 令人印象深刻的', s: 'touching' },
+            { c: 'class3', w: 'in accordance with', m: 'v. 与...一致', s: 'conform' },
+            { c: 'class3', w: 'inaccurate', m: 'adj. 错误的', s: 'incorrect' },
+            { c: 'class3', w: 'inactive', m: 'adj. 不活跃的', s: 'passive' },
+            { c: 'class3', w: 'inappropriate', m: 'adj. 不适当的', s: 'hard' },
+            { c: 'class3', w: 'indulge', m: 'v. 沉溺', s: 'spoil' },
+            { c: 'class3', w: 'infest', m: 'v. 侵害', s: 'plague' },
+            { c: 'class3', w: 'installment', m: 'n. 分期付款', s: 'payment' },
+            { c: 'class3', w: 'intelligence', m: 'n. 智力', s: 'mind' },
+            { c: 'class3', w: 'intense', m: 'adj. 强烈的', s: 'strong' },
+            { c: 'class3', w: 'interaction', m: 'n. 互动', s: 'social activities' },
+            { c: 'class3', w: 'interference', m: 'n. 干涉', s: 'interdependence' },
+            { c: 'class3', w: 'interior', m: 'n. 内部', s: 'inner' },
+            { c: 'class3', w: 'interrupt', m: 'v. 中断', s: 'stop' },
+            { c: 'class3', w: 'introverted', m: 'adj. 内向的', s: 'shyness' },
+            { c: 'class3', w: 'involve', m: 'v. 包含', s: 'associate' },
+            { c: 'class3', w: 'keen', m: 'adj. 热切的', s: 'strong' },
+            { c: 'class3', w: 'label', m: 'v. 打标签', s: 'display' },
+            { c: 'class3', w: 'lack', m: 'v. 缺乏', s: 'shortage' },
+            { c: 'class3', w: 'landscape', m: 'n. 风景', s: 'scene' },
+            { c: 'class3', w: 'likelihood', m: 'n. 可能性', s: 'chance' },
+            { c: 'class3', w: 'limb', m: 'n. 四肢', s: 'arm or leg' },
+            { c: 'class3', w: 'linguistic', m: 'adj. 语言的', s: 'language' },
+            { c: 'class3', w: 'log', m: 'v. 记录', s: 'record' },
+            { c: 'class3', w: 'look-in', m: 'n. 机会', s: 'opportunity' },
+            { c: 'class3', w: 'lopsided', m: 'adj. 不平衡的', s: 'uneven' },
+            { c: 'class3', w: 'mainly', m: 'adv. 主要地', s: 'primarily' },
+            { c: 'class3', w: 'malfunction', m: 'v. 发生故障', s: 'breakdown' },
+            { c: 'class3', w: 'mammal', m: 'n. 哺乳动物', s: 'creature' },
+            { c: 'class3', w: 'manage to do', m: 'v. 设法完成', s: 'success' },
+            { c: 'class3', w: 'manifest', m: 'v. 出现，表现', s: 'obvious' },
+            { c: 'class3', w: 'manufacture', m: 'n. 生产', s: 'produce' },
+            { c: 'class3', w: 'marine', m: 'adj. 海洋的', s: 'sea' },
+            { c: 'class3', w: 'mate', m: 'n. 配偶', s: 'spouse' },
+            { c: 'class3', w: 'mechanism', m: 'n. 机制', s: 'method' },
+            { c: 'class3', w: 'mental', m: 'adj. 精神的', s: 'intelligent' },
+            { c: 'class3', w: 'mercury', m: 'n. 水银', s: 'liquid metal' },
+            { c: 'class3', w: 'meteorological', m: 'adj. 气象的', s: 'weather' },
+            { c: 'class3', w: 'migrate', m: 'v. 迁移', s: 'move' },
+            { c: 'class3', w: 'moisture', m: 'n. 水分', s: 'humidity' },
+            { c: 'class3', w: 'monitor', m: 'v. 监控', s: 'surveillance' },
+            { c: 'class3', w: 'motif', m: 'n. 主题', s: 'theme' },
+            { c: 'class3', w: 'mould', m: 'v. 塑造', s: 'form' },
+            { c: 'class3', w: 'native', m: 'adj. 本国的', s: 'original' },
+            { c: 'class3', w: 'nocturnal', m: 'adj. 夜间的', s: 'night' },
+            { c: 'class3', w: 'norm', m: 'n. 规范', s: 'regulation' },
+            { c: 'class3', w: 'notoriety', m: 'n. 名声', s: 'famous' },
+            { c: 'class3', w: 'objective', m: 'n. 目标', s: 'goal' },
+            { c: 'class3', w: 'obligation', m: 'n. 义务', s: 'responsibility' },
+            { c: 'class3', w: 'obscure', m: 'v. 掩盖', s: 'hide' },
+            { c: 'class3', w: 'obtain', m: 'v. 获得', s: 'get' },
+            { c: 'class3', w: 'odd', m: 'adj. 古怪的', s: 'strange' },
+            { c: 'class3', w: 'odour', m: 'n. 气味', s: 'smell' },
+            { c: 'class3', w: 'offensive', m: 'adj. 冒犯的', s: 'hostile' },
+            { c: 'class3', w: 'official', m: 'adj. 官方的', s: 'authority' },
+            { c: 'class3', w: 'optimum', m: 'adj. 最适宜的', s: 'best' },
+            { c: 'class3', w: 'ordinary', m: 'adj. 普通的', s: 'common' },
+            { c: 'class3', w: 'organ', m: 'n. 器官', s: 'part of body' },
+            { c: 'class3', w: 'out of the question', m: 'adj. 不可能的', s: 'impossible' },
+            { c: 'class3', w: 'overcome', m: 'v. 克服', s: 'defeat' },
+            { c: 'class3', w: 'overtake', m: 'v. 赶上', s: 'surpass' },
+            { c: 'class3', w: 'paralyse', m: 'v. 使瘫痪', s: 'cannot move' },
+            { c: 'class3', w: 'paramount', m: 'adj. 最重要的', s: 'principal' },
+            { c: 'class3', w: 'participate', m: 'v. 参加', s: 'join' },
+            { c: 'class3', w: 'patient', m: 'adj. 耐心的', s: 'repetitive' },
+            { c: 'class3', w: 'peak', m: 'n. 顶峰', s: 'top' },
+            { c: 'class3', w: 'permit', m: 'v. 许可', s: 'allow' },
+            { c: 'class3', w: 'persuade', m: 'v. 说服', s: 'influence' },
+            { c: 'class3', w: 'pessimistic', m: 'adj. 悲观的', s: 'negative' },
+            { c: 'class3', w: 'phase', m: 'n. 阶段', s: 'process' },
+            { c: 'class3', w: 'physical', m: 'adj. 身体的', s: 'body' },
+            { c: 'class3', w: 'plagiarise', m: 'v. 抄袭', s: 'copy' },
+            { c: 'class3', w: 'plenty of', m: 'adj. 大量的', s: 'many' },
+            { c: 'class3', w: 'plot', m: 'v. 密谋', s: 'plan' },
+            { c: 'class3', w: 'pose', m: 'v. 造成', s: 'cause' },
+            { c: 'class3', w: 'portable', m: 'adj. 便携的', s: 'conveyable' },
+            { c: 'class3', w: 'poverty', m: 'n. 贫穷', s: 'poor' },
+            { c: 'class3', w: 'praise', m: 'n. 赞扬', s: 'commend' },
+            { c: 'class3', w: 'predict', m: 'v. 预测', s: 'expect' },
+            { c: 'class3', w: 'pressing', m: 'adj. 迫切的', s: 'urgent' },
+            { c: 'class3', w: 'private', m: 'adj. 私人的', s: 'personal' },
+            { c: 'class3', w: 'prohibit', m: 'v. 禁止', s: 'not allowed' },
+            { c: 'class3', w: 'prolong', m: 'v. 延长', s: 'extend' },
+            { c: 'class3', w: 'promote', m: 'v. 促进', s: 'improve' },
+            { c: 'class3', w: 'prosper', m: 'v. 繁荣', s: 'success' },
+            { c: 'class3', w: 'purify', m: 'v. 净化', s: 'clean' },
+            { c: 'class3', w: 'qualify', m: 'v. 取得资格', s: 'fulfill' },
+            { c: 'class3', w: 'radical', m: 'adj. 彻底的', s: 'utmost' },
+            { c: 'class3', w: 'range', m: 'n. 范围', s: 'scope' },
+            { c: 'class3', w: 'rare', m: 'adj. 稀有的', s: 'unusual' },
+            { c: 'class3', w: 'rate', m: 'v. 评估', s: 'rank; measure' },
+            { c: 'class3', w: 'react', m: 'v. 反应', s: 'respond' },
+            { c: 'class3', w: 'recreation', m: 'n. 娱乐', s: 'entertainment' },
+            { c: 'class3', w: 'reduction', m: 'n. 减少', s: 'decrease' },
+            { c: 'class3', w: 'refer to', m: 'v. 涉及', s: 'talk about' },
+            { c: 'class3', w: 'rehearsal', m: 'n. 排演', s: 'preparation' },
+            { c: 'class3', w: 'reject', m: 'v. 拒绝', s: 'exclude' },
+            { c: 'class3', w: 'relevant', m: 'adj. 相关的', s: 'relative' },
+            { c: 'class3', w: 'religious', m: 'adj. 宗教的', s: 'sacred' },
+            { c: 'class3', w: 'reluctant', m: 'adj. 不情愿的', s: 'unwilling' },
+            { c: 'class3', w: 'reproduce', m: 'v. 繁殖', s: 'breed' },
+            { c: 'class3', w: 'responsible', m: 'adj. 负责的', s: 'liable' },
+            { c: 'class3', w: 'revision', m: 'n. 修正', s: 'editing' },
+            { c: 'class3', w: 'revive', m: 'v. 复苏', s: 'renaissance' },
+            { c: 'class3', w: 'ruin', m: 'v. 毁灭', s: 'destroy' },
+            { c: 'class3', w: 'scenic', m: 'adj. 风景优美的', s: 'beautiful' },
+            { c: 'class3', w: 'shade', m: 'n. 阴影', s: 'shelter' },
+            { c: 'class3', w: 'skepticism', m: 'n. 怀疑', s: 'doubt' },
+            { c: 'class3', w: 'soar', m: 'v. 激增', s: 'increase' },
+            { c: 'class3', w: 'solely', m: 'adv. 唯一地', s: 'alone' },
+            { c: 'class3', w: 'solicitor', m: 'n. 律师', s: 'lawyer' },
+            { c: 'class3', w: 'steer', m: 'v. 引导', s: 'manage' },
+            { c: 'class3', w: 'stimulate', m: 'v. 刺激', s: 'motivate' },
+            { c: 'class3', w: 'stride', m: 'n. 进展', s: 'progress' },
+            { c: 'class3', w: 'succumb', m: 'v. 屈服', s: 'yield' },
+            { c: 'class3', w: 'subdivide', m: 'v. 细分', s: 'break down' },
+            { c: 'class3', w: 'subtle', m: 'adj. 微妙的', s: 'delicate' },
+            { c: 'class3', w: 'substance', m: 'n. 物质', s: 'matter' },
+            { c: 'class3', w: 'sufficiency', m: 'n. 充足', s: 'enough' },
+            { c: 'class3', w: 'supersede', m: 'v. 取代', s: 'replace' },
+            { c: 'class3', w: 'suppress', m: 'v. 抑制', s: 'hold' },
+            { c: 'class3', w: 'supremacy', m: 'n. 至高无上', s: 'priority' },
+            { c: 'class3', w: 'suspicious', m: 'adj. 可疑的', s: 'odd' },
+            { c: 'class3', w: 'sustainable', m: 'adj. 可持续的', s: 'long-term' },
+            { c: 'class3', w: 'symptom', m: 'n. 症状', s: 'sign' },
+            { c: 'class3', w: 'tension', m: 'n. 紧张', s: 'upset' },
+            { c: 'class3', w: 'term', m: 'n. 术语', s: 'word' },
+            { c: 'class3', w: 'throughout', m: 'adv. 自始至终', s: 'anywhere' },
+            { c: 'class3', w: 'toll', m: 'v. 征收', s: 'charge' },
+            { c: 'class3', w: 'trace', m: 'n. 痕迹', s: 'track' },
+            { c: 'class3', w: 'transcend', m: 'v. 超越', s: 'excel' },
+            { c: 'class3', w: 'transit', m: 'v. 运输', s: 'send' },
+            { c: 'class3', w: 'tremendous', m: 'adj. 巨大的', s: 'vast' },
+            { c: 'class3', w: 'trigger', m: 'v. 触发', s: 'begin' },
+            { c: 'class3', w: 'tropical', m: 'adj. 热带的', s: 'hot' },
+            { c: 'class3', w: 'unbiased', m: 'adj. 公正的', s: 'fair' },
+            { c: 'class3', w: 'uniform', m: 'adj. 始终如一的', s: 'consistent' },
+            { c: 'class3', w: 'valuable', m: 'adj. 有价值的', s: 'benefit' },
+            { c: 'class3', w: 'versatile', m: 'adj. 多功能的', s: 'all-around' },
+            { c: 'class3', w: 'view', m: 'v. 看', s: 'overlook' },
+            { c: 'class3', w: 'violent', m: 'adj. 暴力的', s: 'fierce' },
+            { c: 'class3', w: 'visible', m: 'adj. 明显的', s: 'see' },
+            { c: 'class3', w: 'visual', m: 'adj. 视觉的', s: 'image' },
+            { c: 'class3', w: 'well-being', m: 'n. 幸福，健康', s: 'health' },
+        ];
+
+        // --- 同义词大辞典 (手动整理高频替换词) ---
+        // 键名必须为小写
+        const SYNONYM_DB = {
+            'like': 'prep. 像；如同；adj. 相似的',
+            'look like': 'v. 看起来像',
+            'be similar to': 'phr. 与...相似',
+            'perceive': 'v. 察觉，感知；理解',
+            'acknowledge': 'v. 承认；告知收到',
+            'realize': 'v. 意识到；实现',
+            'admit': 'v. 承认；准许进入',
+            'identify': 'v. 识别；认出',
+            'change': 'v. 改变',
+            'modify': 'v. 修改',
+            'shift': 'v. 转移；改变',
+            'alter': 'v. 改变，更改',
+            'method': 'n. 方法',
+            'way': 'n. 方式，方法',
+            'rudimentary': 'adj. 基本的；初步的',
+            'preliminary': 'adj. 初步的',
+            'basic': 'adj. 基本的',
+            'depend on': 'v. 取决于；依赖',
+            'home': 'n. 家；adj. 国内的',
+            'local': 'adj. 当地的',
+            'national': 'adj. 国家的',
+            'calculate': 'v. 计算',
+            'assess': 'v. 评估',
+            'evaluate': 'v. 评价',
+            'characteristic': 'n. 特征',
+            'feature': 'n. 特色，特征',
+            'property': 'n. 财产；性质',
+            'first used': 'phr. 首次使用',
+            'invent': 'v. 发明',
+            'synthetic': 'adj. 合成的',
+            'man-made': 'adj. 人造的',
+            'initiate': 'v. 开始，发起',
+            'immediately': 'adv. 立即',
+            'share': 'v. 分享',
+            'apply a to b': 'phr. 将A应用于B',
+            'based on': 'phr. 基于',
+            'ground': 'n. 地面；理由 v. 建立在...基础',
+            'root': 'n. 根源',
+            'neglect': 'v. 忽视',
+            'overlook': 'v. 忽略；俯瞰',
+            'underestimate': 'v. 低估',
+            'chemical': 'n. 化学物质 adj. 化学的',
+            'toxic': 'adj. 有毒的',
+            'unnatural': 'adj. 不自然的',
+            'this': 'pron. 这个',
+            'it': 'pron. 它',
+            'they': 'pron. 它们',
+            'those': 'pron. 那些',
+            'these': 'pron. 这些',
+            'such': 'adj. 这样的',
+            'or': 'conj. 或者',
+            'as well as': 'phr. 也；和...一样',
+            'not only...but also': 'phr. 不仅...而且',
+            'besides': 'adv. 此外 prep. 除...之外',
+            'but': 'conj. 但是',
+            'yet': 'adv. 还 conj. 但是',
+            'however': 'adv. 然而',
+            'whereas': 'conj. 然而',
+            'instead': 'adv. 代替；反而',
+            'stem from': 'phr. 源于',
+            'owing to': 'phr. 由于',
+            'due to': 'phr. 由于',
+            'because of': 'phr. 因为',
+            // Class 2 & 3 Selection
+            'variety': 'n. 多样性；种类',
+            'difference': 'n. 差异',
+            'find': 'v. 发现',
+            'look for': 'v. 寻找',
+            'seek': 'v. 寻求',
+            'search': 'v. 搜索',
+            'inaccessible': 'adj. 难以到达的',
+            'escape': 'v. 逃避',
+            'evitable': 'adj. 可避免的',
+            'fund': 'n. 资金',
+            'financial': 'adj. 金融的',
+            'fit': 'v. 适合',
+            'suit': 'v. 适合',
+            'substitute': 'n. 替代品 v. 替代',
+            'make up': 'phr. 组成；弥补',
+            'offset': 'v. 抵消',
+            'proportion': 'n. 比例；部分',
+            'weapon': 'n. 武器',
+            'army': 'n. 军队',
+            'standard': 'n. 标准',
+            'syllabus': 'n. 教学大纲',
+            'course of study': 'phr. 课程',
+            'realistic': 'adj. 现实的',
+            'viable': 'adj. 可行的',
+            'stop': 'v. 停止',
+            'control': 'v. 控制',
+            'shortage': 'n. 短缺',
+            'defect': 'n. 缺陷',
+            'weakness': 'n. 弱点',
+            'provision': 'n. 供应；条款',
+            'separate': 'v. 分开 adj. 单独的',
+            'differentiate': 'v. 区分',
+            'examine': 'v. 检查',
+            'diagnose': 'v. 诊断',
+            'focus on': 'phr. 专注于',
+            'stress': 'v. 强调 n. 压力',
+            'massive': 'adj. 巨大的',
+            'large': 'adj. 大的',
+            'mimic': 'v. 模仿',
+            'copy': 'v. 复制',
+            'damage': 'v. 损害',
+            'diminish': 'v. 减少',
+            'decrease': 'v. 减少',
+            'impede': 'v. 阻碍',
+            'prevent': 'v. 预防；阻止',
+            'deter': 'v. 威慑；阻止',
+            'legal': 'adj. 合法的',
+            'restriction': 'n. 限制',
+            'tradition': 'n. 传统',
+            'troublesome': 'adj. 麻烦的',
+            'decide': 'v. 决定',
+            'speed up': 'phr. 加速',
+            'aged': 'adj. 年老的',
+            'old': 'adj. 老的',
+            'helpful': 'adj. 有帮助的',
+            'advantageous': 'adj. 有利的',
+            'lasting': 'adj. 持久的',
+            'aware': 'adj. 意识到的',
+            'knowing': 'adj. 知情的',
+            'reduce': 'v. 减少',
+            'lessen': 'v. 减少',
+            'resistance': 'n. 抵抗力',
+            'compelling': 'adj. 引人注目的；强制的',
+            'necessary': 'adj. 必要的',
+            'discharge': 'v. 排放；解雇',
+            'exude': 'v. 渗出；散发',
+            'overstate': 'v. 夸大',
+            'pass': 'v. 传递',
+            'send': 'v. 发送',
+            'transfer': 'v. 转移',
+            'die out': 'phr. 灭绝',
+            'lost': 'adj. 丢失的',
+            'only': 'adv. 只有 adj. 唯一的',
+            'assure': 'v. 保证',
+            'receive': 'v. 收到',
+            'view': 'v. 看 n. 观点',
+            'see': 'v. 看见',
+            'attractive': 'adj. 有吸引力的',
+            'waste': 'n. 浪费',
+            'gone': 'adj. 离去的',
+            'choice': 'n. 选择',
+            'rather': 'adv. 宁愿；相当',
+            'preference': 'n. 偏好',
+            'principal': 'adj. 主要的',
+            'main': 'adj. 主要的',
+            'rule': 'n. 规则',
+            'possibility': 'n. 可能性',
+            'number': 'n. 数字；数量',
+            'fix': 'v. 修理；固定',
+            'figure out': 'phr. 弄清楚；解决',
+            'complicate': 'v. 使复杂',
+            'detailed': 'adj. 详细的',
+            'particular': 'adj. 特别的',
+            'remain': 'v. 保持；剩余',
+            'quick': 'adj. 快的',
+            'rapid': 'adj. 迅速的',
+            'surprising': 'adj. 令人惊讶的',
+            'setting': 'n. 环境；设置',
+            'environment': 'n. 环境',
+            'try': 'v. 尝试',
+            'test': 'v. 测试',
+            'knowledge': 'n. 知识',
+            'skill': 'n. 技能',
+            'ability': 'n. 能力',
+            'contribute': 'v. 贡献',
+            'energy': 'n. 能量',
+            'force': 'n. 力量',
+            'motive': 'n. 动机',
+            'stimulus': 'n. 刺激',
+            'death': 'n. 死亡',
+            'unimportant': 'adj. 不重要的',
+            'minor': 'adj. 次要的',
+            'neighbourhood': 'n. 街区；附近',
+            'nearby': 'adj. 附近的',
+            'endanger': 'v. 危及',
+            'jeopardize': 'v. 危及',
+            'exercise': 'n. 练习；运动',
+            'virus': 'n. 病毒',
+            'germ': 'n. 细菌；胚芽',
+            'microbe': 'n. 微生物',
+            'face': 'v. 面对',
+            'potential': 'adj. 潜在的',
+            'built-in': 'adj. 内置的',
+            'inborn': 'adj. 天生的',
+            'formation': 'n. 形成；构造',
+            'treatment': 'n. 治疗',
+            'initial': 'adj. 最初的',
+            'first': 'adj. 第一的',
+            'undisclosed': 'adj. 未公开的',
+            'secret': 'adj. 秘密的',
+            'mental': 'adj. 精神的',
+            'obey': 'v. 服从',
+            'ask for advice': 'phr. 征求建议',
+            'higher': 'adj. 更高的',
+            'upper': 'adj. 上面的',
+            'support': 'v. 支持',
+            'work together': 'phr. 合作',
+            'organize': 'v. 组织',
+            'harmonize': 'v. 协调',
+            'vary': 'v. 变化',
+            'hint': 'n. 暗示',
+            'clue': 'n. 线索',
+            'symbol': 'n. 符号',
+            'mark': 'n. 标记',
+            'sign': 'n. 迹象',
+            'quit': 'v. 停止；离开',
+            'give up': 'phr. 放弃',
+            'vulnerable': 'adj. 易受攻击的',
+            'maintain': 'v. 维持',
+            'disappear': 'v. 消失',
+            'rust': 'v. 生锈',
+            'cause': 'v. 引起',
+            'lead to': 'phr. 导致',
+            'constant': 'adj. 不变的',
+            'combine': 'v. 结合',
+            'whole': 'n. 整体 adj. 全部的',
+            'fair': 'adj. 公平的',
+            'even': 'adj. 平坦的；甚至',
+            'offer': 'v. 提供',
+            // --- New Class 3 Expansion ---
+            'gather': 'v. 聚集，收集',
+            'habit': 'n. 习惯，习性',
+            'trouble': 'n. 麻烦，困难',
+            'attack': 'n./v. 攻击，侵袭',
+            'pleasant': 'adj. 令人愉快的',
+            'help': 'n./v. 帮助，援助',
+            'irritate': 'v. 刺激，使恼火',
+            'height': 'n. 高度，海拔',
+            'utilization': 'n. 利用，使用',
+            'agree': 'v. 同意',
+            'order': 'n. 顺序，整齐',
+            'allocate': 'v. 分配，拨出',
+            'union': 'n. 联合，联盟',
+            'opinion': 'n. 意见，看法',
+            'government': 'n. 政府，管辖',
+            'compatible': 'adj. 兼容的，一致的',
+            'tolerate': 'v. 忍受，容忍',
+            'destroy': 'v. 破坏，毁灭',
+            'barrier': 'n. 障碍，屏障',
+            'mishandle': 'v. 处理不当',
+            'load': 'n. 负荷，负担',
+            'disaster': 'n. 灾难',
+            'volume': 'n. 体积，容量',
+            'disastrous': 'adj. 灾难性的',
+            'serve': 'v. 服务，迎合',
+            'verify': 'v. 核实，证明',
+            'municipal': 'adj. 市政的，市的',
+            'remark': 'n. 评论，话语',
+            'engagement': 'n. 婚约；参与',
+            'public': 'adj. 公共的',
+            'travel': 'v. 旅行；通勤',
+            'contrast': 'v. 对比，对照',
+            'hide': 'v. 隐藏',
+            'focus': 'v. 集中（注意力）',
+            'grant': 'v. 授予，同意',
+            'unharmonious': 'adj. 不和谐的',
+            'puzzle': 'v. 使困惑',
+            'traditional': 'adj. 传统的，保守的',
+            'significant': 'adj. 重要的，显著的',
+            'uncertain': 'adj. 不确定的',
+            'disputable': 'adj. 有争议的',
+            'link': 'n. 联系，链接',
+            'mate': 'n. 配偶，伴侣',
+            'collapse': 'n./v. 倒塌，崩溃',
+            'reliance': 'n. 信赖，依赖',
+            'conviction': 'n. 定罪；确信',
+            'risk': 'n. 风险，危机',
+            'condemn': 'v. 谴责，指责',
+            'restrict': 'v. 限制，约束',
+            'wet': 'adj. 潮湿的',
+            'flash': 'v. 闪光，使目眩',
+            'limit': 'n. 限制，极限',
+            'postpone': 'v. 推迟，延期',
+            'republic': 'n. 共和国（民主）',
+            'population statistic': 'phr. 人口统计',
+            'teeth': 'n. 牙齿',
+            'frustration': 'n. 挫折，沮丧',
+            'appoint': 'v. 任命，指定',
+            'hold': 'v. 抓住；持有',
+            'wreck': 'v. 破坏，使失事',
+            'expose': 'v. 揭露，公开',
+            'different': 'adj. 不同的',
+            'show': 'n./v. 展示，显示',
+            'divert': 'v. 转移（注意力）',
+            'spread': 'v. 传播，散布',
+            'record': 'n. 记录，档案',
+            'field': 'n. 领域，场地',
+            'overbearing': 'adj. 专横的，压倒性的',
+            'striking': 'adj. 显著的，惊人的',
+            'dry': 'adj. 干旱的，干燥的',
+            'environmentally-friendly': 'adj. 环保的',
+            'illustrate': 'v. 说明，阐述',
+            'dispose': 'v. 处置，消除',
+            'hard': 'adj. 困难的',
+            'entire range of knowledge': 'phr. 知识全集',
+            'boss': 'n. 老板',
+            'geography': 'n. 地理',
+            'unpredictably': 'adv. 不可预测地',
+            'built': 'adj. 建立的',
+            'property': 'n. 财产，资产',
+            'moral': 'adj. 道德的',
+            'finally': 'adv. 最后，终于',
+            'proof': 'n. 证据',
+            'develop': 'v. 发展，进化',
+            'fatigue': 'n. 疲劳',
+            'test': 'n. 测试，实验',
+            'extreme': 'adj. 极端的，异常的',
+            'clear': 'adj. 清楚的，明确的',
+            'use': 'v. 使用，利用',
+            'expand': 'v. 扩展，延伸',
+            'quotation': 'n. 引用，摘录',
+            'hunger': 'n. 饥饿，饥荒',
+            'limited': 'adj. 有限的',
+            'health': 'n. 健康',
+            'enemy': 'n. 敌人',
+            'structure': 'n. 结构，格式',
+            'piece': 'n. 碎片，块',
+            'chill': 'v. 变冷，冰冻',
+            'execute': 'v. 执行，实施',
+            'factor': 'n. 因素',
+            'talented': 'adj. 有天赋的',
+            'picture': 'adj. 图画的，形象的',
+            'residence': 'n. 住所，栖息地',
+            'difficult': 'adj. 困难的',
+            'rough': 'adj. 粗糙的，严酷的',
+            'assumption': 'n. 假设',
+            'influence': 'n. 影响',
+            'touching': 'adj. 动人的，感人的',
+            'conform': 'v. 符合，遵照',
+            'incorrect': 'adj. 不正确的',
+            'passive': 'adj. 被动的',
+            'spoil': 'v. 溺爱；变质',
+            'plague': 'v. 折磨 n. 瘟疫',
+            'payment': 'n. 支付，付款',
+            'mind': 'n. 头脑，智力',
+            'strong': 'adj. 强烈的',
+            'social activities': 'phr. 社交活动',
+            'interdependence': 'n. 相互依赖',
+            'inner': 'n. 内部',
+            'shyness': 'n. 害羞',
+            'associate': 'v. 联想，结交',
+            'shortage': 'n. 短缺，缺乏',
+            'scene': 'n. 场景，风景',
+            'chance': 'n. 机会，可能性',
+            'arm or leg': 'phr. 肢体',
+            'language': 'adj. 语言的',
+            'opportunity': 'n. 机会',
+            'uneven': 'adj. 不均匀的',
+            'primarily': 'adv. 主要地',
+            'breakdown': 'n. 故障，崩溃',
+            'creature': 'n. 生物',
+            'success': 'n. 成功',
+            'obvious': 'adj. 明显的',
+            'produce': 'v. 生产，制造',
+            'sea': 'adj. 海洋的',
+            'spouse': 'n. 配偶',
+            'intelligent': 'adj. 聪明的',
+            'liquid metal': 'phr. 液态金属',
+            'weather': 'adj. 天气的',
+            'move': 'v. 移动，迁移',
+            'humidity': 'n. 湿度',
+            'surveillance': 'n. 监视',
+            'theme': 'n. 主题',
+            'form': 'v. 形成，塑造',
+            'original': 'adj. 最初的，原始的',
+            'night': 'adj. 夜间的',
+            'regulation': 'n. 规则，规范',
+            'famous': 'adj. 著名的',
+            'goal': 'n. 目标',
+            'responsibility': 'n. 责任',
+            'get': 'v. 获得',
+            'strange': 'adj. 奇怪的',
+            'smell': 'n. 气味',
+            'authority': 'n. 权威，官方',
+            'best': 'adj. 最好的',
+            'common': 'adj. 普通的',
+            'part of body': 'phr. 身体部位',
+            'impossible': 'adj. 不可能的',
+            'defeat': 'v. 击败',
+            'surpass': 'v. 超过',
+            'cannot move': 'phr. 无法移动',
+            'principal': 'adj. 主要的',
+            'join': 'v. 参加',
+            'repetitive': 'adj. 重复的（耐心的反义词，这里原义可能偏颇，修正为耐心相关）',
+            'top': 'n. 顶部',
+            'allow': 'v. 允许',
+            'negative': 'adj. 消极的',
+            'process': 'n. 过程，阶段',
+            'body': 'adj. 身体的',
+            'copy': 'v. 复制，抄袭',
+            'many': 'adj. 许多的',
+            'plan': 'v. 计划，密谋',
+            'conveyable': 'adj. 可输送的，便携的',
+            'poor': 'n. 贫穷',
+            'commend': 'n. 称赞',
+            'expect': 'v. 预期，预测',
+            'urgent': 'adj. 紧急的',
+            'personal': 'adj. 个人的',
+            'not allowed': 'phr. 不允许',
+            'improve': 'v. 改善，促进',
+            'clean': 'v. 清洁，净化',
+            'fulfill': 'v. 履行，满足',
+            'utmost': 'adj. 极度的，彻底的',
+            'scope': 'n. 范围',
+            'unusual': 'adj. 不寻常的，稀有的',
+            'rank': 'v. 评级，排列',
+            'measure': 'v. 测量',
+            'respond': 'v. 回答，反应',
+            'entertainment': 'n. 娱乐',
+            'decrease': 'n. 减少',
+            'talk about': 'v. 谈论，涉及',
+            'preparation': 'n. 准备，排练',
+            'exclude': 'v. 排除，拒绝',
+            'relative': 'adj. 相关的',
+            'sacred': 'adj. 神圣的（宗教的）',
+            'unwilling': 'adj. 不情愿的',
+            'breed': 'v. 繁殖',
+            'liable': 'adj. 有责任的',
+            'editing': 'n. 编辑，修正',
+            'renaissance': 'n. 复兴',
+            'beautiful': 'adj. 美丽的',
+            'shelter': 'n. 庇护所，阴凉处',
+            'doubt': 'n. 怀疑',
+            'increase': 'v. 增加',
+            'alone': 'adv. 单独地',
+            'lawyer': 'n. 律师',
+            'manage': 'v. 管理，操纵',
+            'motivate': 'v. 激励',
+            'progress': 'n. 进步',
+            'yield': 'v. 屈服',
+            'break down': 'phr. 分解，细分',
+            'delicate': 'adj. 精致的，微妙的',
+            'matter': 'n. 物质',
+            'enough': 'n. 充足',
+            'replace': 'v. 替换',
+            'priority': 'n. 优先权',
+            'long-term': 'adj. 长期的',
+            'sign': 'n. 迹象',
+            'upset': 'n. 心烦，混乱',
+            'word': 'n. 词，术语',
+            'anywhere': 'adv. 任何地方',
+            'charge': 'v. 收费',
+            'track': 'n. 踪迹',
+            'excel': 'v. 胜过，超越',
+            'vast': 'adj. 巨大的',
+            'begin': 'v. 开始',
+            'hot': 'adj. 热的',
+            'fair': 'adj. 公平的',
+            'consistent': 'adj. 一致的',
+            'benefit': 'adj. 有益的（价值）',
+            'all-around': 'adj. 全面的，多才多艺的',
+            'fierce': 'adj. 猛烈的',
+            'image': 'adj. 图像的，视觉的'
+        };
+
+        // --- 全局状态 ---
+        let vocabList = [];
+        let masteredIds = [];
+        let currentWord = null;
+        let showMeaning = false;
+        let selectedCategory = 'all';
+        let reviewQueue = []; 
+        let turnCounter = 0;
+        let isReviewing = false; // 是否处于复习模式 (即点击了不记得/模糊后)
+
+        // 默认快捷键
+        let shortcuts = {
+            show: ' ',
+            forgot: 'q',
+            fuzzy: 'w',
+            master: 'e'
+        };
+
+        // --- 数据扩展函数 ---
+        function expandVocabList(data) {
+            let expanded = [];
+            data.forEach(item => {
+                expanded.push(item);
+                if (item.s && item.s.trim()) {
+                    const synonyms = item.s.split(/,|，/).map(s => s.trim()).filter(s => s);
+                    if (synonyms.length > 0) {
+                        synonyms.forEach(syn => {
+                            const otherSynonyms = [item.w, ...synonyms.filter(x => x !== syn)];
+                            const synLower = syn.toLowerCase();
+                            let meaning = SYNONYM_DB[synLower];
+                            if (!meaning) meaning = `同义词: ${item.m}`;
+                            expanded.push({
+                                c: item.c,
+                                w: syn,
+                                m: meaning, 
+                                s: otherSynonyms.join(', '),
+                                err: 0
+                            });
+                        });
+                    }
+                }
+            });
+            return expanded;
+        }
+
+        // --- 初始化 ---
+        function init() {
+            const savedVocab = localStorage.getItem('ielts538_vocab_v6');
+            const savedMastered = localStorage.getItem('ielts538_mastered_v6');
+            const savedShortcuts = localStorage.getItem('ielts538_shortcuts_v1');
+            
+            if (savedVocab) {
+                vocabList = JSON.parse(savedVocab);
+            } else {
+                const baseData = JSON.parse(JSON.stringify(DEFAULT_DATA)).map(w => ({...w, err: 0}));
+                vocabList = expandVocabList(baseData);
+            }
+            masteredIds = savedMastered ? JSON.parse(savedMastered) : [];
+            
+            if (savedShortcuts) {
+                shortcuts = JSON.parse(savedShortcuts);
+            }
+
+            renderCategoryButtons();
+            updateShortcutInputs();
+            nextWord(true);
+
+            // 绑定键盘事件
+            document.addEventListener('keydown', handleKeydown);
+        }
+
+        function saveData() {
+            localStorage.setItem('ielts538_vocab_v6', JSON.stringify(vocabList));
+            localStorage.setItem('ielts538_mastered_v6', JSON.stringify(masteredIds));
+        }
+
+        function saveShortcuts() {
+            localStorage.setItem('ielts538_shortcuts_v1', JSON.stringify(shortcuts));
+        }
+
+        // --- 核心逻辑 ---
+
+        function getFilteredList() {
+            if (selectedCategory === 'all') return vocabList;
+            return vocabList.filter(item => item.c === selectedCategory);
+        }
+
+        function getUnmasteredList() {
+            const filtered = getFilteredList();
+            return filtered.filter(item => !masteredIds.includes(item.w));
+        }
+
+        function nextWord(isInit = false) {
+            turnCounter++;
+            isReviewing = false; // 重置复习状态
+            
+            const dueItems = reviewQueue.filter(item => item.due <= turnCounter);
+            let selectedCandidate = null;
+
+            if (dueItems.length > 0) {
+                dueItems.sort((a, b) => a.due - b.due);
+                const candidate = dueItems[0];
+                reviewQueue = reviewQueue.filter(item => item !== candidate);
+                const foundInCurrent = getUnmasteredList().find(w => w.w === candidate.w);
+                if (foundInCurrent) selectedCandidate = foundInCurrent;
+                else {
+                    candidate.due = turnCounter + 1; 
+                    reviewQueue.push(candidate);
+                }
+            }
+
+            if (!selectedCandidate) {
+                const unmastered = getUnmasteredList();
+                const pendingWords = reviewQueue.map(q => q.w);
+                const availablePool = unmastered.filter(w => !pendingWords.includes(w.w));
+                if (availablePool.length > 0) {
+                    selectedCandidate = availablePool[Math.floor(Math.random() * availablePool.length)];
+                } else if (unmastered.length > 0) {
+                    reviewQueue.sort((a,b) => a.due - b.due);
+                    const forced = reviewQueue.shift(); 
+                    selectedCandidate = unmastered.find(w => w.w === forced.w);
+                }
+            }
+
+            if (selectedCandidate) {
+                currentWord = selectedCandidate;
+                showMeaning = false;
+                updateUI(isInit);
+            } else {
+                currentWord = null;
+                updateUI(isInit);
+            }
+        }
+
+        function handleNext() {
+            nextWord();
+        }
+
+        function handleMaster() {
+            if (currentWord && !isReviewing) {
+                masteredIds.push(currentWord.w);
+                saveData();
+                // 修改：不再直接nextWord()，而是进入复习模式显示释义和"下一个"按钮
+                enterReviewMode();
+            }
+        }
+
+        function handleForgot() {
+            if (currentWord && !isReviewing) {
+                incrementError(currentWord);
+                saveData();
+                enterReviewMode();
+            }
+        }
+
+        function handleFuzzy() {
+            if (currentWord && !isReviewing) {
+                incrementError(currentWord);
+                reviewQueue.push({ w: currentWord.w, due: turnCounter + 15 });
+                saveData(); 
+                enterReviewMode();
+            }
+        }
+
+        function enterReviewMode() {
+            isReviewing = true;
+            showMeaning = true;
+            updateUI();
+        }
+
+        function incrementError(wordObj) {
+            wordObj.err = (wordObj.err || 0) + 1;
+            const idx = vocabList.findIndex(w => w.w === wordObj.w);
+            if (idx !== -1) vocabList[idx].err = wordObj.err;
+        }
+
+        function toggleMeaning() {
+            if (!currentWord) return;
+            if (isReviewing) {
+                // 如果在复习模式，点击卡片通常可以被认为是想进入下一个，或者保持不变
+                // 为了保持交互简单，这里不作特殊处理，只响应按钮
+                return; 
+            }
+            showMeaning = !showMeaning;
+            updateMeaningUI();
+        }
+
+        function switchCategory(cat) {
+            selectedCategory = cat;
+            renderCategoryButtons();
+            nextWord();
+        }
+
+        function resetProgress() {
+            if (confirm("确定要重置当前进度的记忆吗？已斩单词将重新出现。")) {
+                masteredIds = [];
+                reviewQueue = [];
+                saveData();
+                nextWord();
+            }
+        }
+
+        // --- 键盘事件处理 ---
+        function handleKeydown(e) {
+            // 如果正在输入设置，不触发快捷键
+            if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
+
+            const key = e.key.toLowerCase();
+            const code = e.code; // 用于 Space 等
+
+            // 映射 key
+            let pressedKey = key;
+            if (code === 'Space') pressedKey = ' ';
+
+            // 匹配快捷键
+            if (pressedKey === shortcuts.show.toLowerCase()) {
+                e.preventDefault(); // 防止空格滚动页面
+                if (isReviewing) handleNext();
+                else toggleMeaning();
+            } else if (pressedKey === shortcuts.forgot.toLowerCase()) {
+                handleForgot();
+            } else if (pressedKey === shortcuts.fuzzy.toLowerCase()) {
+                handleFuzzy();
+            } else if (pressedKey === shortcuts.master.toLowerCase()) {
+                handleMaster();
+            }
+        }
+
+        // --- 设置相关 ---
+        let listeningInput = null;
+        let listeningAction = null;
+
+        function startListeningKey(input, action) {
+            if (listeningInput) listeningInput.classList.remove('bg-yellow-100');
+            listeningInput = input;
+            listeningAction = action;
+            input.value = "按下任意键...";
+            input.classList.add('bg-yellow-100');
+            
+            // 临时添加一次性监听器
+            document.addEventListener('keydown', captureKey, { once: true });
+        }
+
+        function captureKey(e) {
+            e.preventDefault();
+            if (!listeningInput) return;
+
+            let keyName = e.key;
+            if (e.code === 'Space') keyName = ' ';
+            
+            // 更新数据
+            shortcuts[listeningAction] = keyName;
+            saveShortcuts();
+
+            // 更新 UI
+            listeningInput.value = keyName === ' ' ? 'Space' : keyName;
+            listeningInput.classList.remove('bg-yellow-100');
+            listeningInput.blur();
+            
+            // 刷新主界面的提示键位
+            updateKeyHints();
+
+            listeningInput = null;
+            listeningAction = null;
+        }
+
+        function updateShortcutInputs() {
+            document.getElementById('input-key-show').value = shortcuts.show === ' ' ? 'Space' : shortcuts.show;
+            document.getElementById('input-key-forgot').value = shortcuts.forgot;
+            document.getElementById('input-key-fuzzy').value = shortcuts.fuzzy;
+            document.getElementById('input-key-master').value = shortcuts.master;
+            updateKeyHints();
+        }
+
+        function updateKeyHints() {
+            const formatKey = (k) => k === ' ' ? 'Space' : k.toUpperCase();
+            document.getElementById('hint-key').textContent = formatKey(shortcuts.show);
+            document.getElementById('key-forgot').textContent = formatKey(shortcuts.forgot);
+            document.getElementById('key-fuzzy').textContent = formatKey(shortcuts.fuzzy);
+            document.getElementById('key-master').textContent = formatKey(shortcuts.master);
+        }
+
+        function resetShortcuts() {
+            shortcuts = { show: ' ', forgot: 'q', fuzzy: 'w', master: 'e' };
+            saveShortcuts();
+            updateShortcutInputs();
+        }
+
+        // --- UI 更新 ---
+
+        function renderCategoryButtons() {
+            const container = document.getElementById('category-container');
+            const categories = [{ id: 'all', label: '全部' }, { id: 'class1', label: '一类' }, { id: 'class2', label: '二类' }, { id: 'class3', label: '三类' }];
+            container.innerHTML = categories.map(cat => {
+                const isActive = selectedCategory === cat.id;
+                const activeClass = "bg-indigo-600 text-white shadow-md";
+                const inactiveClass = "bg-slate-100 text-slate-500 hover:bg-slate-200";
+                return `<button onclick="switchCategory('${cat.id}')" class="whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-bold transition-all ${isActive ? activeClass : inactiveClass}">${cat.label}</button>`;
+            }).join('');
+        }
+
+        function updateUI(isInit) {
+            const cardView = document.getElementById('card-view');
+            const doneView = document.getElementById('done-view');
+            const filtered = getFilteredList();
+            const unmastered = getUnmasteredList();
+            const progress = filtered.length > 0 ? Math.round(((filtered.length - unmastered.length) / filtered.length) * 100) : 0;
+            document.getElementById('progress-bar').style.width = `${progress}%`;
+            document.getElementById('progress-text').textContent = `进度 ${progress}% (${filtered.length - unmastered.length}/${filtered.length})`;
+            const labelMap = { 'all': '全部乱序', 'class1': '第一类考点词', 'class2': '第二类考点词', 'class3': '第三类考点词' };
+            document.getElementById('current-category-label').textContent = labelMap[selectedCategory];
+
+            if (unmastered.length === 0 && !currentWord) {
+                cardView.style.display = 'none';
+                doneView.style.display = 'flex';
+                document.getElementById('done-category-name').textContent = labelMap[selectedCategory];
+            } else {
+                cardView.style.display = 'flex';
+                doneView.style.display = 'none';
+                if (currentWord) {
+                    document.getElementById('word-text').textContent = currentWord.w;
+                    document.getElementById('meaning-text').textContent = currentWord.m;
+                    const badge = document.getElementById('word-badge');
+                    badge.textContent = currentWord.c === 'class1' ? 'Class 1' : currentWord.c === 'class2' ? 'Class 2' : 'Class 3';
+                    let colorClass = "";
+                    if (currentWord.c === 'class1') colorClass = "text-red-600 bg-red-50 border-red-200";
+                    else if (currentWord.c === 'class2') colorClass = "text-orange-600 bg-orange-50 border-orange-200";
+                    else colorClass = "text-blue-600 bg-blue-50 border-blue-200";
+                    badge.className = `absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-bold border ${colorClass}`;
+                    const errBadge = document.getElementById('error-badge');
+                    const errCountDisp = document.getElementById('error-count-display');
+                    if (currentWord.err > 0) {
+                        errBadge.classList.remove('hidden');
+                        errCountDisp.textContent = currentWord.err;
+                    } else {
+                        errBadge.classList.add('hidden');
+                    }
+                    const synonymBox = document.getElementById('synonym-box');
+                    const synonymText = document.getElementById('synonym-text');
+                    if (currentWord.s) {
+                        synonymText.textContent = currentWord.s;
+                        synonymBox.classList.remove('hidden');
+                    } else {
+                        synonymBox.classList.add('hidden');
+                    }
+                }
+                
+                // 切换底部按钮区
+                const standardControls = document.getElementById('controls-standard');
+                const reviewControls = document.getElementById('controls-review');
+                
+                // 确保在 updateUI 时刷新释义的可见性
+                updateMeaningUI();
+
+                if (isReviewing) {
+                    standardControls.classList.add('hidden');
+                    reviewControls.classList.remove('hidden');
+                    // 在复习模式，释义总是显示的，所以底部的提示可以隐藏或改为"下一个"
+                    document.getElementById('hint-text').classList.add('opacity-0'); 
+                } else {
+                    standardControls.classList.remove('hidden');
+                    reviewControls.classList.add('hidden');
+                }
+            }
+        }
+
+        function updateMeaningUI() {
+            const container = document.getElementById('meaning-container');
+            const hint = document.getElementById('hint-text');
+            if (showMeaning) {
+                container.classList.remove('opacity-0', 'translate-y-8');
+                container.style.pointerEvents = 'auto';
+                hint.classList.add('opacity-0');
+            } else {
+                container.classList.add('opacity-0', 'translate-y-8');
+                container.style.pointerEvents = 'none';
+                hint.classList.remove('opacity-0');
+            }
+        }
+
+        function toggleStats(show) {
+            const modal = document.getElementById('stats-modal');
+            if (show) { modal.classList.remove('hidden'); renderStatsList('all'); } else { modal.classList.add('hidden'); }
+        }
+
+        function renderStatsList(filterType) {
+            document.querySelectorAll('.stats-filter-btn').forEach(btn => {
+                if (btn.dataset.filter === filterType) {
+                    btn.classList.remove('bg-slate-200', 'text-slate-600');
+                    btn.classList.add('bg-indigo-600', 'text-white');
+                } else {
+                    btn.classList.add('bg-slate-200', 'text-slate-600');
+                    btn.classList.remove('bg-indigo-600', 'text-white');
+                }
+            });
+            const baseList = getFilteredList(); 
+            const masteredSet = new Set(masteredIds);
+            let displayList = [...baseList];
+            const total = baseList.length;
+            const masteredCount = baseList.filter(w => masteredSet.has(w.w)).length;
+            const totalErrors = baseList.reduce((sum, w) => sum + (w.err || 0), 0);
+            document.getElementById('stat-total').textContent = total;
+            document.getElementById('stat-mastered').textContent = masteredCount;
+            document.getElementById('stat-errors').textContent = totalErrors;
+            if (filterType === 'mastered') displayList = displayList.filter(w => masteredSet.has(w.w));
+            else if (filterType === 'unseen') displayList = displayList.filter(w => !masteredSet.has(w.w) && (!w.err || w.err === 0));
+            else if (filterType === 'learning') {
+                displayList = displayList.filter(w => !masteredSet.has(w.w) && (w.err > 0));
+                displayList.sort((a, b) => b.err - a.err);
+            }
+            const listEl = document.getElementById('stats-list');
+            if (displayList.length === 0) {
+                listEl.innerHTML = '<div class="p-8 text-center text-slate-400 text-sm">暂无数据</div>';
+                return;
+            }
+            listEl.innerHTML = displayList.map(w => {
+                const isMastered = masteredSet.has(w.w);
+                const err = w.err || 0;
+                const barWidth = Math.min(err * 10, 100); 
+                let icon = '';
+                if (isMastered) icon = '<span class="text-green-500 font-bold text-xs border border-green-200 bg-green-50 px-1.5 rounded">已斩</span>';
+                else if (err > 0) icon = `<span class="text-amber-600 font-bold text-xs border border-amber-200 bg-amber-50 px-1.5 rounded">错 ${err}</span>`;
+                else icon = '<span class="text-slate-400 font-bold text-xs border border-slate-200 bg-slate-50 px-1.5 rounded">未见</span>';
+                return `
+                    <div class="relative bg-white p-3 flex justify-between items-center overflow-hidden group">
+                        <div class="absolute left-0 top-0 bottom-0 bg-pink-100 opacity-50 error-bar" style="width: ${barWidth}%; z-index: 0;"></div>
+                        <div class="relative z-10 flex flex-col items-start gap-1">
+                            <div class="font-bold text-slate-800 text-sm md:text-base">${w.w}</div>
+                            <div class="text-xs text-slate-500 truncate max-w-[200px]">${w.m}</div>
+                        </div>
+                        <div class="relative z-10 flex items-center gap-2">
+                            ${icon}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function toggleSettings(show) {
+            const modal = document.getElementById('settings-modal');
+            if (show) modal.classList.remove('hidden'); else modal.classList.add('hidden');
+        }
+
+        function resetToDefault() {
+            if(confirm("恢复默认会清除所有进度和错误记录。确定吗？")) {
+                const baseData = JSON.parse(JSON.stringify(DEFAULT_DATA)).map(w => ({...w, err: 0}));
+                vocabList = expandVocabList(baseData);
+                masteredIds = [];
+                reviewQueue = [];
+                saveData();
+                toggleSettings(false);
+                nextWord();
+                alert("已重置 (含精准反向考察)");
+            }
+        }
+
+        function importWords() {
+            const text = document.getElementById('import-area').value;
+            const lines = text.split('\n').filter(l => l.trim().length > 0);
+            const parsed = lines.map(line => {
+                const parts = line.split(/[\t\s]+/);
+                if (parts.length < 2) return null;
+                return { c: 'class3', w: parts[0], m: line.substring(parts[0].length).trim(), s: '', err: 0 };
+            }).filter(Boolean);
+            if (parsed.length > 0) {
+                if(confirm(`解析出 ${parsed.length} 个单词。确定追加？`)) {
+                    vocabList = [...vocabList, ...parsed];
+                    saveData();
+                    document.getElementById('import-area').value = "";
+                    toggleSettings(false);
+                    nextWord();
+                }
+            } else {
+                alert("格式无法识别。");
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>
